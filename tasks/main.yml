@@ -1,0 +1,51 @@
+---
+# [ k8s_worker_node - tasks ]
+
+# Check if node is member of the cluster
+- name: Check if node is member of the cluster
+  include_tasks:
+    file: roles/k8s_generic_node/tasks/k8s_cluster_membership.yml
+    apply:
+      delegate_to: "{{ groups['k8s_master'][0] }}"
+  tags: [ k8s_worker_node, run-k8s_kubeadm_init, check-k8s_node_membership ]
+
+
+# Get kubeadm join command
+- name: Get kubeadm join command
+  include_tasks:
+    file: roles/k8s_generic_node/tasks/k8s_join_command.yml
+    apply:
+      delegate_to: "{{ groups['k8s_master'][0] }}"
+      tags: always
+  tags: [ k8s_worker_node, run-k8s_kubeadm_join, get-k8s_kubeadm_join_command ]
+
+
+# Join node to the existing Kubernetes cluster as a worker
+- block:
+  - name: Join node to the existing Kubernetes cluster as a worker
+    shell: "{{ k8s_kubernetes.worker_join_command }} --v=5"
+    failed_when: no
+    register: k8s_kubeadm_cluster_join
+  
+  - copy:
+      dest: "{{ item }}/kubeadm-join_log_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.log"
+      content: "{{ k8s_kubeadm_cluster_join.stdout }}"
+      mode: 0644
+    with_items: [ "/root", "/var/log" ]
+  
+  - debug: msg="Joining node to the existing Kubernetes cluster failed!"
+    failed_when: yes
+    when: k8s_kubeadm_cluster_join.rc != 0
+
+  when:
+    - k8s_kubernetes.worker_join_command is defined
+    - k8s_node_is_member_of_cluster.stdout == ""
+  tags: [ k8s_worker_node, run-k8s_kubeadm_join ]
+
+
+# Set labels and taints
+- name: Set labels and taints
+  include_tasks:
+    file: roles/k8s_generic_node/tasks/k8s_labels_and_taints.yml
+  when: k8s_kubernetes_node_labels != [] or k8s_kubernetes_node_taints != []
+  tags: [ set-k8s_node_labels, remove-k8s_node_labels, set-k8s_node_taints, remove-k8s_node_taints ]

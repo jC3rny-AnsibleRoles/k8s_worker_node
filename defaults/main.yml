@@ -1,0 +1,11 @@
+---
+# [ k8s_worker_node - defaults ]
+ansible_facts_env_user: "{{ ansible_facts.env.SUDO_USER | default(ansible_facts.env.USER) }}"
+
+k8s_kubernetes_local_kube_config_path: "./tmp/{{ ansible_facts_env_user }}-{{ k8s_kubernetes_cluster_name }}.conf"
+
+k8s_kubernetes_node_labels: []
+  # - { name: node-role.kubernetes.io/worker, value: "" }
+  # - { name: node-role.kubernetes.io/infra, value: "" }
+k8s_kubernetes_node_taints: []
+  # - { name: node-role.kubernetes.io/infra, value: "", effect: "NoSchedule" }
