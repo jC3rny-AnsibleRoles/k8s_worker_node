@@ -1,0 +1,17 @@
+---
+# [ k8s_worker_node - handlers ]
+
+- name: Reload kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    masked: no
+    state: restarted
+    daemon_reload: yes
+
+- name: Stop kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    masked: no
+    state: stopped

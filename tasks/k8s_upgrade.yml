@@ -1,0 +1,81 @@
+---
+# [ k8s_worker_node - tasks/k8s_upgrade.yml ]
+
+# Download kubeadm package
+- name: Download kubeadm package
+  get_url:
+    url: https://storage.googleapis.com/kubernetes-release/release/{{ k8s_kubernetes_version }}/bin/linux/{{ k8s_kubernetes_arch }}/{{ item }}
+    dest: "{{ k8s_packages_directory }}/{{ item }}"
+    force: true
+    mode: 0755
+  with_items: [ "kubeadm" ]
+
+
+# Run kubeadm config images pull
+- name: Run kubeadm config images pull
+  shell: "kubeadm config images pull -v=5"
+  failed_when: no
+  register: k8s_kubeadm_config_images_pull
+
+- copy:
+    content: "{{ k8s_kubeadm_config_images_pull.stdout }}"
+    dest: "{{ item }}/kubeadm_config_images_pull_{{ k8s_kubernetes_version }}_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.log"
+    mode: 0644
+  with_items: [ "/root", "/var/log" ]
+
+- copy:
+    content: "{{ k8s_kubeadm_config_images_pull.stdout }}"
+    dest: "./tmp/{{ inventory_hostname }}-kubeadm_config_images_pull_{{ k8s_kubernetes_version }}_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.log"
+    mode: 0644
+  delegate_to: localhost
+
+
+# Run kubeadm upgrade node
+- name: Run kubeadm upgrade node
+  shell: "kubeadm upgrade node -v=5"
+  failed_when: no
+  register: k8s_kubeadm_upgrade_node
+
+- copy:
+    content: "{{ k8s_kubeadm_upgrade_node.stdout }}"
+    dest: "{{ item }}/kubeadm_upgrade_node_{{ k8s_kubernetes_version }}_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.log"
+    mode: 0644
+  with_items: [ "/root", "/var/log" ]
+
+- copy:
+    content: "{{ k8s_kubeadm_upgrade_node.stdout }}"
+    dest: "./tmp/{{ inventory_hostname }}-kubeadm_upgrade_node_{{ k8s_kubernetes_version }}_{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}.log"
+    mode: 0644
+  delegate_to: localhost
+
+
+# Download kubectl package
+- name: Download kubectl package
+  get_url:
+    url: https://storage.googleapis.com/kubernetes-release/release/{{ k8s_kubernetes_version }}/bin/linux/{{ k8s_kubernetes_arch }}/{{ item }}
+    dest: "{{ k8s_packages_directory }}/{{ item }}"
+    force: true
+    mode: 0755
+  notify: Stop kubelet service
+  with_items: [ "kubectl" ]
+
+- ansible.builtin.meta: flush_handlers
+
+
+# Download kubelet package
+- name: Download kubelet package
+  get_url:
+    url: https://storage.googleapis.com/kubernetes-release/release/{{ k8s_kubernetes_version }}/bin/linux/{{ k8s_kubernetes_arch }}/{{ item }}
+    dest: "{{ k8s_packages_directory }}/{{ item }}"
+    force: true
+    mode: 0755
+  notify: Reload kubelet service
+  with_items: [ "kubelet" ]
+
+- ansible.builtin.meta: flush_handlers
+
+
+# Waiting for post-upgrade check
+- name: "Waiting for {{ inventory_hostname }} post-upgrade check"
+  ansible.builtin.pause:
+    prompt: Press return to continue. Press Ctrl+c and then "a" to abort

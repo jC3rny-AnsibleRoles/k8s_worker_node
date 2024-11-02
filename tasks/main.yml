@@ -43,6 +43,15 @@
   tags: [ k8s_worker_node, run-k8s_kubeadm_join ]
 
 
+# Upgrade Kubernetes worker node
+- name: "Upgrade Kubernetes worker node to {{ k8s_kubernetes_version }}"
+  include_tasks:
+    file: "roles/{{ role_name }}/tasks/k8s_upgrade.yml"
+    apply:
+      tags: always
+  tags: [ never, upgrade-k8s_worker_node ]
+
+
 # Set labels and taints
 - name: Set labels and taints
   include_tasks:

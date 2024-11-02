@@ -1,8 +1,13 @@
 ---
 # [ k8s_worker_node - defaults ]
 ansible_facts_env_user: "{{ ansible_facts.env.SUDO_USER | default(ansible_facts.env.USER) }}"
-
 k8s_kubernetes_local_kube_config_path: "./tmp/{{ ansible_facts_env_user }}-{{ k8s_kubernetes_cluster_name }}.conf"
+
+k8s_packages_directory: "/usr/local/bin"
+
+# Kubernetes
+k8s_kubernetes_arch: "amd64"
+k8s_kubernetes_version: ""
 
 k8s_kubernetes_node_labels: []
   # - { name: node-role.kubernetes.io/worker, value: "" }
